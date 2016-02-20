@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import ServerFs.serverFs as serverFs
 import ClientFs.clientFs as clientFs
+import Skype4Py
 import sys
 
 
