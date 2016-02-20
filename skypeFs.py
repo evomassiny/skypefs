@@ -12,7 +12,7 @@ if __name__ == '__main__':
                 server = serverFs.ServerFs()
             elif sys.argv[1] == '-client':
                 client = clientFs.ClientFs('live:yves2608')
-    except Skype4Py.errors.SkypeError(e):
+    except Skype4Py.errors.SkypeError as e:
         print e
 
 

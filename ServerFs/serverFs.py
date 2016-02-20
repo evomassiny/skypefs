@@ -10,9 +10,10 @@ class ServerSkypeEvents:
         # streams contain all streams that have
         # some data, we scan all of them, read
         # and print the data out
-        print 'Receiving ...'
         for s in streams:
+            print 'Receiving from %s' % s.Handle
             print s.Read()
+            s.Write('OK')
 
 class ServerFs:
 
@@ -28,7 +29,6 @@ class ServerFs:
 
         # create application
         app.Create()
-        print 'App created...'
 
         # wait forever until Ctrl+C (SIGINT) is issued
         try:

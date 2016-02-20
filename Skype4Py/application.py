@@ -33,6 +33,7 @@ class Application(Cached):
                 self._Connect_Stream[0] = s[0]
                 self._Connect_Event.set()
 
+
     def Connect(self, Username, WaitConnected=False):
         """Connects application to user.
 
@@ -239,7 +240,7 @@ class ApplicationStream(Cached):
     """)
 
     def _GetPartnerHandle(self):
-        return self.Handle.split(':')[0]
+        return ':'.join(self.Handle.split(':')[:-1])
 
     PartnerHandle = property(_GetPartnerHandle,
     doc="""Skypename of the user this stream is connected to.
