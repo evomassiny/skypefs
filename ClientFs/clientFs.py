@@ -14,20 +14,20 @@ class SkypeEvents:
     # this handler is called when streams are opened or
     # closed, the streams argument contains a list of
     # all currently opened streams
-    # def ApplicationStreams(self, app, streams):
-        # # if streams is not empty then a stream to
-        # # the user was opened, we use its Write
-        # # method to send data; if streams is empty
-        # # then it means a stream was closed and we
-        # # can signal the main thread that we're done
-        # if streams:
-            # print 'Sending msg...'
-            # streams[0].Write('TEST')
-            # streams[0].Disconnect()
-            # print 'Done'
-        # # else:
-            # global event
-            # event.set()
+    def ApplicationStreams(self, app, streams):
+        # if streams is not empty then a stream to
+        # the user was opened, we use its Write
+        # method to send data; if streams is empty
+        # then it means a stream was closed and we
+        # can signal the main thread that we're done
+        if streams:
+            print 'Sending msg...'
+            streams[0].Write('TEST')
+            streams[0].Disconnect()
+            print 'Done'
+        # else:
+            global event
+            event.set()
 
     # this handler is called when data is sent over a
     # stream, the streams argument contains a list of
@@ -60,10 +60,8 @@ class ClientFs:
         try:
             print 'Connecting ...'
             stream = app.Connect(username, WaitConnected=True)
-            stream.Write('TEST2')
-            # event.set()
-            # # wait until the event handlers do the job
-            # event.wait()
+            # wait until the event handlers do the job
+            event.wait()
         except KeyboardInterrupt:
             pass
 
