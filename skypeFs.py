@@ -5,10 +5,13 @@ import sys
 
 
 if __name__ == '__main__':
-    if len(sys.argv) >= 2:
-        if sys.argv[1] == '-server':
-            server = serverFs.ServerFs()
-        elif sys.argv[1] == '-client':
-            client = clientFs.ClientFs('live:yves2608')
+    try:
+        if len(sys.argv) >= 2:
+            if sys.argv[1] == '-server':
+                server = serverFs.ServerFs()
+            elif sys.argv[1] == '-client':
+                client = clientFs.ClientFs('live:yves2608')
+    except Skype4Py.errors.SkypeError(e):
+        print e
 
 
