@@ -44,7 +44,7 @@ class ClientFs(Skype4Py.skype.SkypeEvents):
                 self._data[s] = s.Read()
                 # release lock
                 self._events[s].set()
-            # s.Disconnect()
+                # s.Disconnect()
 
     def get_output(self, data):
         """This function send and object in
@@ -55,9 +55,10 @@ class ClientFs(Skype4Py.skype.SkypeEvents):
         stream.Write(base64.encodestring(pickle.dumps(data)))
         # lock until responce
         self._events[stream].wait()
-        # del self._events[stream]
+        del self._events[stream]
         if stream in self._data:
             output = pickle.loads(base64.decodestring(self._data[stream]))
+            # print(output)
             del self._data[stream]
             return output
         return None

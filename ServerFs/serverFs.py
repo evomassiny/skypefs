@@ -65,7 +65,8 @@ class FuseHandler(LoggingMixIn, Operations):
     def access(self, path, mode):
         path = self.abs_path(path)
         if not os.access(path, mode):
-            raise FuseOSError(EACCES)
+            # raise FuseOSError(EACCES)
+            return FuseOSError(EACCES)
 
     chmod = os.chmod
     chown = os.chown
@@ -93,16 +94,17 @@ class FuseHandler(LoggingMixIn, Operations):
             print 'Error'
             return {}
 
-    getxattr = None
-
     def link(self, target, source):
         path = self.abs_path(target)
         return os.link(source, target)
 
-    listxattr = None
     mkdir = os.mkdir
     mknod = os.mknod
-    open = os.open
+    # open = os.open
+    def open(self, path, *args, **kwargs):
+        path = self.abs_path(path)
+        return os.open(path, *args, **kwargs)
+
 
     def read(self, path, size, offset, fh):
         path = self.abs_path(path)
@@ -114,8 +116,6 @@ class FuseHandler(LoggingMixIn, Operations):
         path = self.abs_path(path)
         return ['.', '..'] + os.listdir(path)
 
-    readlink = os.readlink
-
     def release(self, path, fh):
         path = self.abs_path(path)
         return os.close(fh)
@@ -123,7 +123,13 @@ class FuseHandler(LoggingMixIn, Operations):
     def rename(self, old, new):
         return os.rename(old, self.root + new)
 
-    rmdir = os.rmdir
+    def rmdir(path, *args, **kwargs):
+        path = self.abs_path(path)
+        return os.rmdir(path, *path, **kwargs)
+
+    def readlink(path, *args, **kwargs):
+        path = self.abs_path(path)
+        return os.readlink(path, *path, **kwargs)
 
     def statfs(self, path):
         path = self.abs_path(path)
@@ -148,3 +154,9 @@ class FuseHandler(LoggingMixIn, Operations):
         with self.rwlock:
             os.lseek(fh, offset, 0)
             return os.write(fh, data)
+
+    def getxattr(self, *args, **kwargs):
+        return None
+
+    def listxattr(self, *args, **kwargs):
+        return None

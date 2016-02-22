@@ -274,6 +274,7 @@ class Skype(EventHandlingBase):
     def _DoCommand(self, Cmd, ExpectedReply=''):
         command = Command(Cmd, ExpectedReply, True, self.Timeout)
         self.SendCommand(command)
+        print command.Reply
         a, b = chop(command.Reply)
         if a == 'ERROR':
             errnum, errstr = chop(b)
@@ -778,7 +779,7 @@ class Skype(EventHandlingBase):
             self._Api.send_command(Command)
         except SkypeAPIError:
             self.ResetCache()
-            raise
+            # raise
 
     def SendMessage(self, Username, Text):
         """Sends a chat message.
