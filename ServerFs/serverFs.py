@@ -56,10 +56,14 @@ class FuseHandler(LoggingMixIn, Operations):
         self.root = realpath(root)
         self.rwlock = Lock()
 
-    def __call__(self, op, path, *args):
-        return super(FuseHandler, self).__call__(op, self.root + path, *args)
+    def abs_path(self, path):
+        return self.root + path
+
+    # def __call__(self, op, path, *args):
+        # return super(FuseHandler, self).__call__(op, self.root + path, *args)
 
     def access(self, path, mode):
+        path = self.abs_path(path)
         if not os.access(path, mode):
             raise FuseOSError(EACCES)
 
@@ -67,22 +71,32 @@ class FuseHandler(LoggingMixIn, Operations):
     chown = os.chown
 
     def create(self, path, mode):
+        path = self.abs_path(path)
         return os.open(path, os.O_WRONLY | os.O_CREAT, mode)
 
     def flush(self, path, fh):
+        path = self.abs_path(path)
         return os.fsync(fh)
 
     def fsync(self, path, datasync, fh):
+        path = self.abs_path(path)
         return os.fsync(fh)
 
     def getattr(self, path, fh=None):
-        st = os.lstat(path)
-        return dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
-            'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
+        path = self.abs_path(path)
+        print path
+        try:
+            st = os.lstat(path)
+            return dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
+                'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
+        except OSError:
+            print 'Error'
+            return {}
 
     getxattr = None
 
     def link(self, target, source):
+        path = self.abs_path(target)
         return os.link(source, target)
 
     listxattr = None
@@ -91,16 +105,19 @@ class FuseHandler(LoggingMixIn, Operations):
     open = os.open
 
     def read(self, path, size, offset, fh):
+        path = self.abs_path(path)
         with self.rwlock:
             os.lseek(fh, offset, 0)
             return os.read(fh, size)
 
     def readdir(self, path, fh):
+        path = self.abs_path(path)
         return ['.', '..'] + os.listdir(path)
 
     readlink = os.readlink
 
     def release(self, path, fh):
+        path = self.abs_path(path)
         return os.close(fh)
 
     def rename(self, old, new):
@@ -109,6 +126,7 @@ class FuseHandler(LoggingMixIn, Operations):
     rmdir = os.rmdir
 
     def statfs(self, path):
+        path = self.abs_path(path)
         stv = os.statvfs(path)
         return dict((key, getattr(stv, key)) for key in ('f_bavail', 'f_bfree',
             'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_flag',
@@ -118,6 +136,7 @@ class FuseHandler(LoggingMixIn, Operations):
         return os.symlink(source, target)
 
     def truncate(self, path, length, fh=None):
+        path = self.abs_path(path)
         with open(path, 'r+') as f:
             f.truncate(length)
 
@@ -125,6 +144,7 @@ class FuseHandler(LoggingMixIn, Operations):
     utimens = os.utime
 
     def write(self, path, data, offset, fh):
+        path = self.abs_path(path)
         with self.rwlock:
             os.lseek(fh, offset, 0)
             return os.write(fh, data)

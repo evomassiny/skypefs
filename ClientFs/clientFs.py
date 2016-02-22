@@ -8,7 +8,6 @@ import time
 import sys
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 
-skypeClient = None
 class ClientFs(Skype4Py.skype.SkypeEvents):
 
     def __init__(self, username, mntPath):
@@ -27,9 +26,8 @@ class ClientFs(Skype4Py.skype.SkypeEvents):
         self._data = {}
 
     def run(self):
-        global skypeClient
-        skypeClient = self
-        fuse = FUSE(FuseClient(), self._mntPath, foreground=True)
+        fuse = FUSE(FuseClient(self), self._mntPath, 
+                foreground=True, nothreads=True)
 
     def close(self):
         self._app.Delete()
@@ -46,7 +44,7 @@ class ClientFs(Skype4Py.skype.SkypeEvents):
                 self._data[s] = s.Read()
                 # release lock
                 self._events[s].set()
-            s.Disconnect()
+            # s.Disconnect()
 
     def get_output(self, data):
         """This function send and object in
@@ -57,7 +55,7 @@ class ClientFs(Skype4Py.skype.SkypeEvents):
         stream.Write(base64.encodestring(pickle.dumps(data)))
         # lock until responce
         self._events[stream].wait()
-        del self._events[stream]
+        # del self._events[stream]
         if stream in self._data:
             output = pickle.loads(base64.decodestring(self._data[stream]))
             del self._data[stream]
@@ -79,8 +77,8 @@ class ClientFs(Skype4Py.skype.SkypeEvents):
 
 class FuseClient(Operations): # (Operations, LoggingMixIn):
 
-    # def __init__(self, skypeClient):
-        # self.skypeClient = skypeClient
+    def __init__(self, skypeClient):
+        self.skypeClient = skypeClient
 
     # ## Fuse function
     # def __getattr__(self, method):
@@ -90,7 +88,5 @@ class FuseClient(Operations): # (Operations, LoggingMixIn):
         # return sendCmdWrapper
 
     def __call__(self, method, *args, **kwargs):
-        global skypeClient
-        # return super(FuseHandler, self).__call__(op, self.root + path, *args)
-        return skypeClient.sendCmd(method, *args, **kwargs)
+        return self.skypeClient.sendCmd(method, *args, **kwargs)
 
