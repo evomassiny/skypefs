@@ -7,6 +7,7 @@ import threading
 
 from utils import *
 from user import *
+from Skype4Py.errors import SkypeError
 
 
 class Application(Cached):
@@ -187,7 +188,10 @@ class ApplicationStream(Cached):
           Text : unicode
             Data to send.
         """
-        self.Application._Alter('WRITE', '%s %s' % (self.Handle, tounicode(Text)))
+        try:
+            self.Application._Alter('WRITE', '%s %s' % (self.Handle, tounicode(Text)))
+        except SkypeError as skypeError:
+            print tounicode(Text)
 
     write = Write
 

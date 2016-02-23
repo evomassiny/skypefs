@@ -7,6 +7,7 @@ from os.path import realpath
 from threading import Lock
 import base64
 import pickle
+import xattr
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 
@@ -48,7 +49,14 @@ class ServerFs:
         data = pickle.loads(base64.decodestring(data))
         print 'Executing %s' % data['method']
         methodToCall = getattr(self._fuseHandler, data['method'])
-        output = methodToCall(*data['args'], **data['kwargs'])
+        try:
+            output = methodToCall(*data['args'], **data['kwargs'])
+        except OSError as e:
+            output = e
+        except FuseOSError as e:
+            output = e
+        except IOError as e:
+            output = OSError()
         return base64.encodestring(pickle.dumps(output))
 
 class FuseHandler(LoggingMixIn, Operations):
@@ -65,8 +73,8 @@ class FuseHandler(LoggingMixIn, Operations):
     def access(self, path, mode):
         path = self.abs_path(path)
         if not os.access(path, mode):
-            # raise FuseOSError(EACCES)
-            return FuseOSError(EACCES)
+            raise FuseOSError(EACCES)
+            # return FuseOSError(EACCES)
 
     chmod = os.chmod
     chown = os.chown
@@ -85,22 +93,30 @@ class FuseHandler(LoggingMixIn, Operations):
 
     def getattr(self, path, fh=None):
         path = self.abs_path(path)
-        print path
-        try:
-            st = os.lstat(path)
-            return dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
-                'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
-        except OSError:
-            print 'Error'
-            return {}
+        # print path
+        # try:
+        st = os.lstat(path)
+        return dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
+            'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
+        # except OSError as e:
+            # return e
 
     def link(self, target, source):
         path = self.abs_path(target)
         return os.link(source, target)
 
-    mkdir = os.mkdir
-    mknod = os.mknod
-    # open = os.open
+    def unlink(self, path, *args, **kwargs):
+        path = self.abs_path(path)
+        return os.unlink(path, *args, **kwargs)
+
+    def mknod(self, path, *args, **kwargs):
+        path = self.abs_path(path)
+        return os.mknod(path, *args, **kwargs)
+
+    def mkdir(self, path, *args, **kwargs):
+        path = self.abs_path(path)
+        return os.mkdir(path, *args, **kwargs)
+
     def open(self, path, *args, **kwargs):
         path = self.abs_path(path)
         return os.open(path, *args, **kwargs)
@@ -139,6 +155,8 @@ class FuseHandler(LoggingMixIn, Operations):
             'f_frsize', 'f_namemax'))
 
     def symlink(self, target, source):
+        source = self.abs_path(source)
+        target = self.abs_path(target)
         return os.symlink(source, target)
 
     def truncate(self, path, length, fh=None):
@@ -146,7 +164,6 @@ class FuseHandler(LoggingMixIn, Operations):
         with open(path, 'r+') as f:
             f.truncate(length)
 
-    unlink = os.unlink
     utimens = os.utime
 
     def write(self, path, data, offset, fh):
@@ -155,8 +172,10 @@ class FuseHandler(LoggingMixIn, Operations):
             os.lseek(fh, offset, 0)
             return os.write(fh, data)
 
-    def getxattr(self, *args, **kwargs):
-        return None
+    def getxattr(self, path, *args, **kwargs):
+        path = self.abs_path(path)
+        return xattr.getxattr(path, *args, **kwargs)
 
-    def listxattr(self, *args, **kwargs):
-        return None
+    def listxattr(self, path, *args, **kwargs):
+        path = self.abs_path(path)
+        return xattr.listxattr(path, *args, **kwargs)

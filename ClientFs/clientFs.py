@@ -89,5 +89,9 @@ class FuseClient(Operations): # (Operations, LoggingMixIn):
         # return sendCmdWrapper
 
     def __call__(self, method, *args, **kwargs):
-        return self.skypeClient.sendCmd(method, *args, **kwargs)
+        print '%s %s' % (method, args)
+        output = self.skypeClient.sendCmd(method, *args, **kwargs)
+        if issubclass(type(output), BaseException):
+            raise output
+        return output
 
