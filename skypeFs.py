@@ -1,22 +1,36 @@
 #!/usr/bin/env python
-import ServerFs.serverFs as serverFs
-import ClientFs.clientFs as clientFs
-import Skype4Py
+# -*- coding: utf-8 -*-
+from Skype4Py.errors import SkypeError
 import sys
 
 
 def main():
-    if len(sys.argv) < 3:
-        return
+    def usage():
+        '''Print usage and exit '''
+        sys.stderr.write('USAGE: %s < -server | -client > <directory> [username]\n')
+        sys.stderr.flush()
+        sys.exit()
 
     # ARG parsing
-    if sys.argv[1] == '-server':
-        skypeFs = serverFs.ServerFs(sys.argv[2])
-    elif sys.argv[1] == '-client':
-        skypeFs = clientFs.ClientFs('live:yves2608', sys.argv[2])
+    if len(sys.argv) < 3:
+        usage()
+    config_server = sys.argv[1] == '-server'
+    directory = sys.argv[2]
+    if not config_server:
+        if len(sys.argv) >= 4:
+            username = sys.argv[3]
+        else:
+            usage()
+    # Run
+    if config_server:
+        import ServerFs.serverFs as serverFs
+        skypeFs = serverFs.ServerFs(directory)
+    else:
+        import ClientFs.clientFs as clientFs
+        skypeFs = clientFs.ClientFs(username, directory)
     try:
         skypeFs.run()
-    except Skype4Py.errors.SkypeError as skypeError:
+    except SkypeError as skypeError:
         print skypeError
     except KeyboardInterrupt:
         pass
