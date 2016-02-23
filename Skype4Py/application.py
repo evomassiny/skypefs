@@ -8,6 +8,7 @@ import threading
 from utils import *
 from user import *
 from Skype4Py.errors import SkypeError
+import cPickle as pickle
 
 
 class Application(Cached):
@@ -191,7 +192,8 @@ class ApplicationStream(Cached):
         try:
             self.Application._Alter('WRITE', '%s %s' % (self.Handle, tounicode(Text)))
         except SkypeError as skypeError:
-            print tounicode(Text)
+            self.Application._Alter('WRITE', '%s %s' % (self.Handle, base64.encodestring(tounicode(pickle.dumps(OSError())))))
+            print 'Error while sending %s chars' % len(tounicode(Text))
 
     write = Write
 

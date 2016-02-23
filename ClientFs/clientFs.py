@@ -3,12 +3,14 @@
 import Skype4Py
 import threading
 import base64
-import pickle
+import cPickle as pickle
 import time
 import sys
-from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
+from fuse import FUSE, Operations
 
 class ClientFs(Skype4Py.skype.SkypeEvents):
+    '''This class is handle client-side communication
+        using the Skype4py API'''
 
     def __init__(self, username, mntPath):
         # instatinate Skype object and set our event handlers
@@ -48,12 +50,10 @@ class ClientFs(Skype4Py.skype.SkypeEvents):
 
     def get_output(self, data):
         """This function send and object in
-        the peer2peer network and return its responce"""
-        # stream = self._app.Connect(self._username, WaitConnected=True)
+        the peer2peer network and return its response"""
         stream = self.connect()
         self._events[stream] = threading.Event()
         stream.Write(base64.encodestring(pickle.dumps(data)))
-        # lock until responce
         self._events[stream].wait()
         del self._events[stream]
         if stream in self._data:
@@ -63,34 +63,23 @@ class ClientFs(Skype4Py.skype.SkypeEvents):
             return output
         return None
 
-    # ## Fuse function
-    # def __getattr__(self, method):
-        # '''Called when __getattribute__ fails'''
-        # def sendCmdWrapper(*args, **kwargs):
-            # return self.sendCmd(method, *args, **kwargs)
-        # return sendCmdWrapper
-    
-    def sendCmd(self, method, *args, **kwargs):
+    def callServerMethod(self, method, *args, **kwargs):
         cmd = { 'method': method,
                 'args': args,
                 'kwargs': kwargs}
         return self.get_output(cmd)
 
-class FuseClient(Operations): # (Operations, LoggingMixIn):
+class FuseClient(Operations):
+    '''This class is a client-side interface for fuse,
+        it redirect every operations
+        to the server through a ClientFs instance'''
 
     def __init__(self, skypeClient):
         self.skypeClient = skypeClient
 
-    # ## Fuse function
-    # def __getattr__(self, method):
-        # '''Called when __getattribute__ fails'''
-        # def sendCmdWrapper(*args, **kwargs):
-            # return self.skypeClient.sendCmd(method, *args, **kwargs)
-        # return sendCmdWrapper
-
     def __call__(self, method, *args, **kwargs):
-        print '%s %s' % (method, args)
-        output = self.skypeClient.sendCmd(method, *args, **kwargs)
+        '''Call Server side FuseServer'''
+        output = self.skypeClient.callServerMethod(method, *args, **kwargs)
         if issubclass(type(output), BaseException):
             raise output
         return output

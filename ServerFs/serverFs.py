@@ -6,12 +6,14 @@ from errno import EACCES
 from os.path import realpath
 from threading import Lock
 import base64
-import pickle
+import cPickle as pickle
 import xattr
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 
 class ServerFs:
+    '''This class is handle client-side communication
+        using the Skype4py API'''
 
     def __init__(self, rootPath):
         # instatinate Skype object and set our event handlers
@@ -21,7 +23,7 @@ class ServerFs:
         # obtain reference to Application object
         app = skype.Application('SkypeFs')
         # create application
-        self._fuseHandler = FuseHandler(rootPath)
+        self._fuseServer = FuseServer(rootPath)
         app.Create()
         self.app = app
 
@@ -47,8 +49,7 @@ class ServerFs:
         '''Call self.method depending of the method request
         in the request'''
         data = pickle.loads(base64.decodestring(data))
-        print 'Executing %s' % data['method']
-        methodToCall = getattr(self._fuseHandler, data['method'])
+        methodToCall = getattr(self._fuseServer, data['method'])
         try:
             output = methodToCall(*data['args'], **data['kwargs'])
         except OSError as e:
@@ -59,7 +60,10 @@ class ServerFs:
             output = OSError()
         return base64.encodestring(pickle.dumps(output))
 
-class FuseHandler(LoggingMixIn, Operations):
+
+class FuseServer(LoggingMixIn, Operations):
+    """This class is an Interface for server-side Fuse"""
+
     def __init__(self, root):
         self.root = realpath(root)
         self.rwlock = Lock()
@@ -67,17 +71,19 @@ class FuseHandler(LoggingMixIn, Operations):
     def abs_path(self, path):
         return self.root + path
 
-    # def __call__(self, op, path, *args):
-        # return super(FuseHandler, self).__call__(op, self.root + path, *args)
-
     def access(self, path, mode):
         path = self.abs_path(path)
         if not os.access(path, mode):
             raise FuseOSError(EACCES)
             # return FuseOSError(EACCES)
 
-    chmod = os.chmod
-    chown = os.chown
+    def chmod(self, path, *args, **kwargs):
+        path = self.abs_path(path)
+        return os.chmod(path, *args, **kwargs)
+
+    def chown(self, path, *args, **kwargs):
+        path = self.abs_path(path)
+        return os.chown(path, *args, **kwargs)
 
     def create(self, path, mode):
         path = self.abs_path(path)
@@ -93,13 +99,14 @@ class FuseHandler(LoggingMixIn, Operations):
 
     def getattr(self, path, fh=None):
         path = self.abs_path(path)
-        # print path
-        # try:
         st = os.lstat(path)
-        return dict((key, getattr(st, key)) for key in ('st_atime', 'st_ctime',
-            'st_gid', 'st_mode', 'st_mtime', 'st_nlink', 'st_size', 'st_uid'))
-        # except OSError as e:
-            # return e
+        return dict(
+                (key, getattr(st, key)) for key in (
+                    'st_atime', 'st_ctime',
+                    'st_gid', 'st_mode',
+                    'st_mtime', 'st_nlink',
+                    'st_size', 'st_uid')
+                )
 
     def link(self, target, source):
         path = self.abs_path(target)
@@ -150,9 +157,14 @@ class FuseHandler(LoggingMixIn, Operations):
     def statfs(self, path):
         path = self.abs_path(path)
         stv = os.statvfs(path)
-        return dict((key, getattr(stv, key)) for key in ('f_bavail', 'f_bfree',
-            'f_blocks', 'f_bsize', 'f_favail', 'f_ffree', 'f_files', 'f_flag',
-            'f_frsize', 'f_namemax'))
+        return dict(
+                (key, getattr(stv, key)) for key in (
+                    'f_bavail', 'f_bfree',
+                    'f_blocks', 'f_bsize',
+                    'f_favail', 'f_ffree',
+                    'f_files', 'f_flag',
+                    'f_frsize', 'f_namemax')
+                )
 
     def symlink(self, target, source):
         source = self.abs_path(source)
