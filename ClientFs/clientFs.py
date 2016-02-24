@@ -88,23 +88,10 @@ class ClientFs(Skype4Py.skype.SkypeEvents, object):
         # and print the data out
         for i, s in enumerate(streams):
             cmd_id, data = self.decode_response(s.Read())
-            print 'receiving command %d' % cmd_id
             self._data[cmd_id] = data
             # release lock
             self._events[cmd_id].set()
             # s.Disconnect()
-
-    # # this handler is called when data is sent over a
-    # # stream, the streams argument contains a list of
-    # # all currently sending streams
-    # def ApplicationSending(self, app, streams):
-        # # if streams is empty then it means that all
-        # # streams have finished sending data, since
-        # # we have only one, we disconnect it here;
-        # # this will cause ApplicationStreams event
-        # # to be called
-        # if not streams:
-            # app.Streams[0].Disconnect()
 
     def get_output(self, data):
         """This function send and object in
@@ -115,8 +102,7 @@ class ClientFs(Skype4Py.skype.SkypeEvents, object):
         if self.stream is None:
             self.connect()
             self._connect_event.wait()
-        self.stream.Write(data)
-        print 'sending command %d' % cmd_id
+        self.stream.Write(cmd)
         self._events[cmd_id].wait()
         if cmd_id in self._data:
             output = self._data[cmd_id]

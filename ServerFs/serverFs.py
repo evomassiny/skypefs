@@ -67,7 +67,7 @@ class ServerFs(object):
         '''Call self.method depending of the method request
         in the request'''
         methodToCall = getattr(self._fuseServer, data['method'])
-        print 'Calling %s' % (data['method'])
+        print 'Calling %s(%s)' % (data['method'], data['args'])
         try:
             return methodToCall(*data['args'])
         except Exception as e:
