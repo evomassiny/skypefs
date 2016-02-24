@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import Skype4Py
 import time
 import os
@@ -8,10 +9,11 @@ from threading import Lock
 import base64
 import cPickle as pickle
 import xattr
+from Skype4Py.errors import SkypeError
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 
-class ServerFs:
+class ServerFs(object):
     '''This class is handle client-side communication
         using the Skype4py API'''
 
@@ -35,6 +37,16 @@ class ServerFs:
     def close(self):
         self.app.Delete()
 
+    @staticmethod
+    def encode_response(data, cmd_id):
+        return base64.encodestring(
+                pickle.dumps((cmd_id, data)))
+
+    @staticmethod
+    def decode_command(data):
+        return pickle.loads(
+            base64.decodestring(data))
+
     ## SKYPE events
     def ApplicationReceiving(self, app, streams):
         ''' this handler is called when there is some
@@ -43,22 +55,23 @@ class ServerFs:
         # some data, we scan all of them, read
         # and print the data out
         for s in streams:
-            s.Write(self.execCmd(s.Read()))
+            cmd_id, data = self.decode_command(s.Read())
+            try:
+                data = self.execCmd(data)
+                s.Write(self.encode_response(data, cmd_id))
+            except SkypeError as skypeError:
+                s.Write(self.encode_response(OSError(), cmd_id ))
+                print 'Error while sending data %d' % cmd_id
 
     def execCmd(self, data):
         '''Call self.method depending of the method request
         in the request'''
-        data = pickle.loads(base64.decodestring(data))
         methodToCall = getattr(self._fuseServer, data['method'])
+        print 'Calling %s' % (data['method'])
         try:
-            output = methodToCall(*data['args'], **data['kwargs'])
-        except OSError as e:
-            output = e
-        except FuseOSError as e:
-            output = e
-        except IOError as e:
-            output = OSError()
-        return base64.encodestring(pickle.dumps(output))
+            return methodToCall(*data['args'])
+        except Exception as e:
+            return e
 
 
 class FuseServer(LoggingMixIn, Operations):

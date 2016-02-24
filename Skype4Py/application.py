@@ -9,6 +9,7 @@ from utils import *
 from user import *
 from Skype4Py.errors import SkypeError
 import cPickle as pickle
+import base64
 
 
 class Application(Cached):
@@ -189,11 +190,7 @@ class ApplicationStream(Cached):
           Text : unicode
             Data to send.
         """
-        try:
-            self.Application._Alter('WRITE', '%s %s' % (self.Handle, tounicode(Text)))
-        except SkypeError as skypeError:
-            self.Application._Alter('WRITE', '%s %s' % (self.Handle, base64.encodestring(tounicode(pickle.dumps(OSError())))))
-            print 'Error while sending %s chars' % len(tounicode(Text))
+        self.Application._Alter('WRITE', '%s %s' % (self.Handle, tounicode(Text)))
 
     write = Write
 
